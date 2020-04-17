@@ -19,10 +19,10 @@ Clean up code
 Add support for more block types and information input
 
 ## Dependencies
-zlib
-math
-struct
-Pillow
+* zlib
+* math
+* struct
+* Pillow
 
 ## Installation
 Currently it's not really an installed library or full program.  Simply put it into an environment with Pillow installed.  You'll also need to edit the file name in the beginning of the script.  Next version should use commandline parameters.
