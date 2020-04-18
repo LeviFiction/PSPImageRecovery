@@ -1,22 +1,18 @@
 import struct
 import zlib
 import math
+import sys
+import os
 from PIL import Image
+
+#Define Global variables and data types
 
 uncompressed_size = 0
 size = (0,0)
 buffer = None
 Offset = 0
+bufflen = 0
 
-Filename = "C:\\Users\\Jack\\Desktop\\lossless example\\gimp-lossless.pspimage"
-Filename = "C:\\Users\\Jack\\Documents\\Corel PaintShop Pro\\2020\\Preset Shapes\\test.PSPShape"
-Filename = "Fountain1.pspimage"
-#Filename = "test2.pspimage"
-#Filename = "fb.pspimage"
-Filename = "thin white_crashes_psp.pspimage"
-with open(Filename, 'rb') as f:
-    buffer = f.read()
-bufflen = len(buffer)
 endian = "<"
 BYTE = "B"  #8-bit unsigned int
 B_ARRAY = "{}B" #8-bit unsigned int array
@@ -445,10 +441,48 @@ PSPGraphicContents = {
     
 Block_Header = [B_ARRAY.format(4), WORD, DWORD]
 
+def main():
+    global bufflen
+    # input("Getting Started")
+    if len(sys.argv) < 2:
+        print("No filename given")
+        return
+    Filename = sys.argv[1]
+    if not os.path.isfile(Filename):
+        print("Not a valid file, please try again")
+        return
+    try:
+        with open(Filename, 'rb') as f:
+            buffer = f.read()
+        bufflen = len(buffer)
+    except:
+        print("Couldn't load file into memory")
+        return
+        
+    h = FileHeader(buffer)
+    if h.valid:
+        offset = h.offset
+        bufflen = len(buffer)
+        while offset < bufflen:
+            b = BLOCK(buffer,offset)
+            if b.valid:
+                if PSPBlockID[b.blockID] == "PSP_IMAGE_BLOCK":
+                    ib = GENERAL_IMAGE_ATTRIBUTES(buffer,offset)
+                    print("Expansionn field: " + str(not ib.size_test))
+                    size = (ib.width,ib.height)
+                    offset = ib.block_offset
+                elif PSPBlockID[b.blockID] == "PSP_LAYER_START_BLOCK" and ib.valid:
+                    if b.offset > bufflen:
+                        print("Layer Bank is reporting itself as larger than the actual file") 
+                    lb = LAYER_BANK(buffer,offset,ib.layercount, PSPCompression[ib.compression])
+                    offset = lb.offset
+                else:
+                    offset = b.offset
+                    
 def grabData(offset, buffer, format):
     test = struct.calcsize(format)
     if offset+test > bufflen:
-        print("Cannot return data at {} for {}".format(offset, format))
+        print("{} Cannot return data at {} for {}".format(bufflen, offset, format))
     data = struct.unpack_from(format, buffer, offset)
     offset += struct.calcsize(format)
     return (offset, data)
@@ -459,13 +493,13 @@ class FileHeader():
         offset = 0
         offset, data = grabData(offset, buffer, File_Header[0])
         if opening_comp == data:
-            print "Valid file"
+            print("Valid file")
             offset, data = grabData(offset, buffer, File_Header[1])
-            print FormatVersion[data[0]]
+            print(FormatVersion[data[0]])
             offset, minor = grabData(offset, buffer, File_Header[2])
             this.valid = 1
         else:
-            print "Invalid File"
+            print("Invalid File")
             this.valid = 0
         this.offset = offset
 
@@ -522,7 +556,7 @@ class GENERAL_IMAGE_ATTRIBUTES():
             print( "Layer Count: " + str(this.layercount))
             for cont in PSPGraphicContents.keys():
                 if cont & this.graphic_contents:
-                    print "Graphic Contents: " + str(PSPGraphicContents[cont])
+                    print("Graphic Contents: " + str(PSPGraphicContents[cont]))
             this.size_test = offset == this.block_offset
             this.offset = offset
         else:
@@ -539,7 +573,7 @@ class BLOCK():
                 print(data)
             this.blockID = data[0]
             if printname:
-                print PSPBlockID[data[0]]
+                print(PSPBlockID[data[0]])
             offset, data = grabData(offset, buffer, Block_Header[2])
             this.offset = offset + data[0]
         else:
@@ -605,13 +639,13 @@ class LAYER_BLOCK():
             this.mask_linked, this.mask_disabled, this.mask_invert, this.range_count = data
             offset,data = grabData(offset, buffer, endian+B_ARRAY.format(4)*10)
             offset,data = grabData(offset, buffer, endian+BYTE+DWORD)
-            #print(this.layername)
-            #print("\t"+str(this.type))
+            print(this.layername)
+            print("\t"+str(this.type))
             print("\t{} : {}".format(this.layername, this.imagerect[0:2]))
             #print(repr(buffer[offset:offset+4]))
             print("\t"+str(this.layerrect))
             #print("\t"+str(this.imagerect))
-            #print("\t"+str(this.opacity))
+            print("\t"+str(this.opacity))
             print("\t"+str(this.blendmode))
             this.channels = []
             while offset < this.offset:
@@ -632,7 +666,7 @@ class LAYER_BLOCK():
                     if len(chan.full) < ssize[0]*ssize[1]:
                         chan.full = chan.full + ((ssize[0]*ssize[1]) - len(chan.full))*b'\x00'
                     if chan.chan_type == "PSP_CHANNEL_RED":
-                        print("Converting red channel")
+                        print("Converting red channel and Removing Padding" if ssize[0]%4 != 0 else "Converting red channel")
                         #red = [x for x in chan.full]
                         r = Image.frombytes("L", ssize, removepadding(chan.full, ssize) if ssize[0]%4 != 0 else chan.full)
                         #a.save(this.layername+'.png')
@@ -674,7 +708,7 @@ class EXTENDED_DATA_BLOCK():
             this.valid = 1
             offset, data = grabData(offset, buffer, Block_Header[1])
             this.blockID = data[0]
-            print PSPBlockID[data[0]]
+            print(PSPBlockID[data[0]])
             offset, data = grabData(offset, buffer, Block_Header[2])
             this.offset = offset + data[0]
         else:
@@ -795,23 +829,6 @@ def removepadding(data,size):
         # newdata += data[int(offset):int(tmp)]
         # offset += rowSize
     # return newdata
-    
-h = FileHeader(buffer)
-if h.valid:
-    offset = h.offset
-    bufflen = len(buffer)
-    while offset < bufflen:
-        b = BLOCK(buffer,offset)
-        if b.valid:
-            if PSPBlockID[b.blockID] == "PSP_IMAGE_BLOCK":
-                ib = GENERAL_IMAGE_ATTRIBUTES(buffer,offset)
-                print "Expansionn field: " + str(not ib.size_test)
-                size = (ib.width,ib.height)
-                offset = ib.block_offset
-            elif PSPBlockID[b.blockID] == "PSP_LAYER_START_BLOCK" and ib.valid:
-                if b.offset > bufflen:
-                    print("Layer Bank is reporting itself as larger than the actual file") 
-                lb = LAYER_BANK(buffer,offset,ib.layercount, PSPCompression[ib.compression])
-                offset = lb.offset
-            else:
-                offset = b.offset
+                    
+if __name__ == "__main__":
+    main()
