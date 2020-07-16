@@ -806,7 +806,7 @@ class RLE():
         pass
 
 def removepadding(data,size):
-    rowSize = int(math.ceil(((8*size[0])/32)*4))
+    rowSize = int(math.ceil((8*size[0])/32)*4)
     byteSize = int(size[0])
     padding = rowSize - byteSize
     newdata = b''
