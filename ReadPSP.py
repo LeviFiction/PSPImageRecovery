@@ -12,6 +12,7 @@ size = (0,0)
 buffer = None
 Offset = 0
 bufflen = 0
+compression = None
 
 endian = "<"
 BYTE = "B"  #8-bit unsigned int
@@ -49,7 +50,8 @@ FormatVersion = {
     10: "PSP X2 compatible Format",
     11: "PSP X3 compatible Format",
     12: "PSP X4 - X7 compatible Format",
-    13: "PSP X8 - 2020 compatible Format"
+    13: "PSP X8 - 2020 compatible Format",
+    14: "Unknown"
     }
 
 PSPBlockID = ["PSP_IMAGE_BLOCK", # 0 - General Image Attributes Block (main)
@@ -525,6 +527,8 @@ class GENERAL_IMAGE_ATTRIBUTES():
             this.metric = data[0]
             offset,data = grabData(offset, buffer, endian+WORD)
             this.compression = data[0]
+            global compression
+            compression = this.compression
             offset,data = grabData(offset, buffer, endian+WORD)
             this.bitdepth = data[0]
             offset,data = grabData(offset, buffer, endian+WORD)
@@ -690,7 +694,7 @@ class LAYER_BLOCK():
                 elif r and g and b:
                     RGBA = Image.merge("RGB",(r,g,b))
                 if RGBA:
-                    RGBA.save(this.layername+'({},{}).png'.format(*this.imagerect[0:2]))
+                    RGBA.save(str(this.layername)+'({},{}).png'.format(*this.imagerect[0:2]))
                 del(this.channels)
                 #print("Zipping them up")
                 #full = list(zip(red,green,blue))
@@ -804,9 +808,16 @@ class RLE():
             # runoffset = offset
             # while runoffset+1 <= datalen and 
         pass
+        
+def calcRowSize(bitsPerPixel, ImageWidth):
+    return ((((bitsPerPixel*ImageWidth)+31)&~31)>>3)
 
 def removepadding(data,size):
-    rowSize = int(math.ceil((8*size[0])/32)*4)
+    if compression != 1: return data
+    rowSize = calcRowSize(8,size[0])
+    print("RowSize final: ", rowSize)
+    rowSize = int(math.ceil(((8*size[0])/32))*4)
+    print("Row Size initial:", rowSize)
     byteSize = int(size[0])
     padding = rowSize - byteSize
     newdata = b''
