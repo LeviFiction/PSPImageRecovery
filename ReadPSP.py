@@ -187,16 +187,16 @@ PSPCompression = [
     
 # Layer types.
 
-PSPLayerType = [
-    "keGLTUndefined", # Undefined layer type
-    "keGLTRaster", # Standard raster layer
-    "keGLTFloatingRasterSelection", # Floating selection (raster)
-    "keGLTVector", # Vector layer
-    "keGLTAdjustment", # Adjustment layer
-    "keGLTGroup", # Group layer
-    "keGLTMask", # Mask layer
-    "keGLTArtMedia" # Art media layer
-    ]
+PSPLayerType = {
+    0:"keGLTUndefined", # Undefined layer type
+    1:"keGLTRaster", # Standard raster layer
+    2:"keGLTFloatingRasterSelection", # Floating selection (raster)
+    3:"keGLTVector", # Vector layer
+    4:"keGLTAdjustment", # Adjustment layer
+    5:"keGLTGroup", # Group layer
+    6:"keGLTMask", # Mask layer
+    7:"keGLTArtMedia" # Art media layer
+    }
     
 # Layer flags.
 
@@ -644,7 +644,7 @@ class LAYER_BLOCK():
             offset,data = grabData(offset, buffer, endian+B_ARRAY.format(4)*10)
             offset,data = grabData(offset, buffer, endian+BYTE+DWORD)
             print(this.layername)
-            print("\t"+str(this.type))
+            print("\t"+str(PSPLayerType[this.type]))
             print("\t{} : {}".format(this.layername, this.imagerect[0:2]))
             #print(repr(buffer[offset:offset+4]))
             print("\t"+str(this.layerrect))
@@ -664,7 +664,9 @@ class LAYER_BLOCK():
                     
                 else:
                     offset = this.offset
-            ssize = this.layerrect[2:]
+            #rect is start x,y and end x,y.  Subtract start from end to get width and height
+            ssize = [this.layerrect[2]-this.layerrect[0],this.layerrect[3]-this.layerrect[1]]
+            
             if this.channels:
                 for chan in this.channels:
                     if len(chan.full) < ssize[0]*ssize[1]:
@@ -773,6 +775,8 @@ class CHANNEL_BLOCK():
             elif comp_type == "PSP_COMP_RLE":
                 r = RLE()
                 this.full = r.decompress(this.channel)
+            elif comp_type == "PSP_COMP_NONE":
+                this.full = this.channel
             print("\t\tBitmap Type:" + this.bmp_type + " : " + this.chan_type + " : {}:{}".format(this.uncomp_length, len(this.full)))
  
         else:
