@@ -666,7 +666,7 @@ class LAYER_BLOCK():
                     offset = this.offset
             #rect is start x,y and end x,y.  Subtract start from end to get width and height
             ssize = [this.layerrect[2]-this.layerrect[0],this.layerrect[3]-this.layerrect[1]]
-            
+            r,g,b,a = None,None,None,None
             if this.channels:
                 for chan in this.channels:
                     if len(chan.full) < ssize[0]*ssize[1]:
@@ -818,11 +818,11 @@ def calcRowSize(bitsPerPixel, ImageWidth):
 
 def removepadding(data,size):
     if compression != 1: return data
-    rowSize = calcRowSize(8,size[0])
+    rowSize = calcRowSize(8,size[0]) #width * 8
     print("RowSize final: ", rowSize)
     rowSize = int(math.ceil(((8*size[0])/32))*4)
     print("Row Size initial:", rowSize)
-    byteSize = int(size[0])
+    byteSize = int(size[0]) #Width
     padding = rowSize - byteSize
     newdata = b''
     offset = 0
@@ -831,7 +831,7 @@ def removepadding(data,size):
     print(size)
     print(rowSize)
     print(byteSize, padding)
-    for y in range(size[1]):
+    for y in range(size[1]): #Height
         tmp = int(offset+byteSize)
         data = data[0:tmp] + data[tmp+padding:]
         perc = (((y*1.0)/size[1])*100)
