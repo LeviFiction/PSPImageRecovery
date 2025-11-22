@@ -768,7 +768,7 @@ class CHANNEL_BLOCK():
             if comp_type == "PSP_COMP_LZ77":
                 try:
                     # this.full = zlib.decompress(this.channel)
-                    d = zlib.decompressobj()
+                    d = zlib.decompressobj(wbits=-15)
                     this.full = d.decompress(this.channel)
                 except:
                     print("\t\t\tFAILED TO UNPACK THIS CHANNEL")
@@ -817,11 +817,11 @@ def calcRowSize(bitsPerPixel, ImageWidth):
     return ((((bitsPerPixel*ImageWidth)+31)&~31)>>3)
 
 def removepadding(data,size):
-    if compression != 1: return data
-    rowSize = calcRowSize(8,size[0]) #width * 8
-    print("RowSize final: ", rowSize)
+    if compression != 0: return data
+    #rowSize = calcRowSize(8,size[0]) #width * 8
+    #print("RowSize final: ", rowSize)
     rowSize = int(math.ceil(((8*size[0])/32))*4)
-    print("Row Size initial:", rowSize)
+    #print("Row Size initial:", rowSize)
     byteSize = int(size[0]) #Width
     padding = rowSize - byteSize
     newdata = b''
@@ -847,3 +847,4 @@ def removepadding(data,size):
                     
 if __name__ == "__main__":
     main()
+
