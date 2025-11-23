@@ -816,7 +816,7 @@ class RLE():
 def calcRowSize(bitsPerPixel, ImageWidth):
     return ((((bitsPerPixel*ImageWidth)+31)&~31)>>3)
 
-def removepadding_bytearray(data, size):
+def removepadding(data, size):
     # This version uses bytearray for efficient in-memory manipulation.
     # 1. Calculate dimensions and padding (assuming 8 bits per pixel for a mask)
     bitsPerPixel = 8 
@@ -867,5 +867,6 @@ def removepadding_bytearray(data, size):
                     
 if __name__ == "__main__":
     main()
+
 
 
