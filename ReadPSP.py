@@ -816,35 +816,56 @@ class RLE():
 def calcRowSize(bitsPerPixel, ImageWidth):
     return ((((bitsPerPixel*ImageWidth)+31)&~31)>>3)
 
-def removepadding(data,size):
-    if compression != 0: return data
-    #rowSize = calcRowSize(8,size[0]) #width * 8
-    #print("RowSize final: ", rowSize)
-    rowSize = int(math.ceil(((8*size[0])/32))*4)
-    #print("Row Size initial:", rowSize)
-    byteSize = int(size[0]) #Width
-    padding = rowSize - byteSize
-    newdata = b''
-    offset = 0
-    datalen = len(data)
-    lastPerc = 0
-    print(size)
-    print(rowSize)
-    print(byteSize, padding)
-    for y in range(size[1]): #Height
-        tmp = int(offset+byteSize)
-        data = data[0:tmp] + data[tmp+padding:]
-        perc = (((y*1.0)/size[1])*100)
-        if perc >= lastPerc+10:
-            print (((y*1.0)/size[1])*100)
-            lastPerc = perc
-    return data
-    # while offset < datalen:
-        # tmp = offset+byteSize
-        # newdata += data[int(offset):int(tmp)]
-        # offset += rowSize
-    # return newdata
+def removepadding_bytearray(data, size):
+    # This version uses bytearray for efficient in-memory manipulation.
+    # 1. Calculate dimensions and padding (assuming 8 bits per pixel for a mask)
+    bitsPerPixel = 8 
+    ImageWidth = size[0]
+    H = size[1]
+    
+    # Padded row size in bytes (must be a multiple of 4 bytes)
+    rowSize = calcRowSize(bitsPerPixel, ImageWidth)
+    
+    # Actual row size in bytes (unpadded width)
+    byteSize = ImageWidth
+    
+    # Total size of the final, clean (unpadded) data
+    clean_data_size = H * byteSize
+    
+    print("--- Optimized Padding Removal (bytearray) ---")
+    print(f"Size: {ImageWidth} x {H}")
+    print(f"Padded Row Size: {rowSize} bytes")
+    print(f"Clean Data Size: {clean_data_size} bytes")
+
+    # 2. Initialization
+    # Allocate the bytearray to the final, required size (H * W)
+    clean_data = bytearray(clean_data_size) 
+    
+    read_offset = 0    # Offset in the source 'data' buffer (moves by rowSize)
+    write_offset = 0   # Offset in the target 'clean_data' bytearray (moves by byteSize)
+    
+    # 3. Iterate, read, and write
+    for y in range(H):
+        
+        # Calculate the end position of the actual pixel data in the source
+        data_end = read_offset + byteSize
+        
+        # 3a. Read the unpadded row from the source byte string
+        row_data_slice = data[read_offset : data_end]
+        
+        # 3b. Write the slice directly into the target bytearray
+        # This is the key, efficient operation:
+        clean_data[write_offset : write_offset + byteSize] = row_data_slice
+        
+        # 4. Advance offsets
+        read_offset += rowSize    # Skip the padding bytes in the source
+        write_offset += byteSize  # Move to the start of the next row in the target
+        
+    # The function returns the memory-efficient, unpadded bytearray.
+    # It is now ready to be passed to potracelib.dll via ctypes.
+    return clean_data
                     
 if __name__ == "__main__":
     main()
+
 
